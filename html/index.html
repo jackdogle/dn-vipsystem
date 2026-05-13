@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darkness VIP Shop</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div id="app" style="display: none;">
+        <div class="tablet-wrapper">
+            <div class="tablet-frame">
+                <div class="tablet-screen">
+                    <!-- Status Bar -->
+                    <div class="tablet-status-bar">
+                        <div class="left">
+                            <span id="current-time">12:00</span>
+                        </div>
+                        <div class="center">
+                            <div class="camera-lens"></div>
+                        </div>
+                        <div class="right">
+                            <i data-lucide="moon" id="theme-toggle" class="theme-btn"></i>
+                            <i class="lucide-signal"></i>
+                            <i class="lucide-wifi"></i>
+                            <i class="lucide-battery"></i>
+                        </div>
+                    </div>
+
+                    <div class="container">
+                        <!-- Header -->
+                        <header>
+                            <div class="logo-area">
+                                <h1>DARKNESS <span>COMMUNITY</span></h1>
+                                <p>INDONESIA - VIP ACCESS</p>
+                            </div>
+                            <div class="user-stats">
+                                <div class="stat-box">
+                                    <span class="label">SALDO</span>
+                                    <span class="value" id="user-coins">0 DC</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="label">STATUS</span>
+                                    <span class="value" id="user-vip">NONE</span>
+                                </div>
+                            </div>
+                        </header>
+
+                        <!-- Main Content -->
+                        <main>
+                            <!-- Sidebar Category -->
+                            <aside id="categories">
+                                <button class="cat-btn" data-cat="profile"><i data-lucide="user"></i> PROFILE</button>
+                                <button class="cat-btn" data-cat="gacha"><i data-lucide="package"></i> VAULT</button>
+                                <button class="cat-btn active" data-cat="vip"><i data-lucide="crown"></i> VIP SHOP</button>
+                                <button class="cat-btn" data-cat="vehicles"><i data-lucide="car"></i> VEHICLES</button>
+                                <button class="cat-btn" data-cat="items"><i data-lucide="box"></i> ITEMS</button>
+                                <button class="cat-btn" data-cat="money"><i data-lucide="banknote"></i> CURRENCY</button>
+                            </aside>
+
+                            <!-- Shop Items Grid -->
+                            <section id="shop-grid">
+                                <!-- Dinamis terisi oleh JS -->
+                            </section>
+                        </main>
+
+                        <!-- Footer / Help -->
+                        <footer>
+                            <p>Tekan <kbd>ESC</kbd> untuk keluar • Harap cek kembali sebelum membeli.</p>
+                        </footer>
+
+                        <!-- Tablet Bottom Dock -->
+                        <div class="tablet-dock">
+                            <div class="dock-item" onclick="renderShop('profile')"><i data-lucide="user"></i></div>
+                            <div class="dock-item" onclick="renderShop('vip')"><i data-lucide="crown"></i></div>
+                            <div class="dock-item central" onclick="renderShop('gacha')"><i data-lucide="layout-grid"></i></div>
+                            <div class="dock-item" onclick="renderShop('vehicles')"><i data-lucide="car"></i></div>
+                            <div class="dock-item" onclick="renderShop('money')"><i data-lucide="banknote"></i></div>
+                        </div>
+
+                        <!-- Software Navigation Bar -->
+                        <div class="tablet-nav-bar">
+                            <div class="nav-btn"><i data-lucide="chevron-left"></i></div>
+                            <div class="nav-btn home" onclick="fetch(`https://${GetParentResourceName()}/closeMenu`, {method: 'POST'})"><div class="home-indicator"></div></div>
+                            <div class="nav-btn"><i data-lucide="layers"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tablet-home-btn" onclick="fetch(`https://${GetParentResourceName()}/closeMenu`, {method: 'POST'})"></div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="modal" class="hidden">
+            <div class="modal-content">
+                <h3>KONFIRMASI</h3>
+                <p id="modal-text">Apakah anda yakin ingin membeli item ini?</p>
+                <div class="modal-actions">
+                    <button id="confirm-buy" class="btn-primary">YA, BELI</button>
+                    <button id="cancel-buy" class="btn-ghost">BATAL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
