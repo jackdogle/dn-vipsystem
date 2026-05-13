@@ -106,30 +106,38 @@ window.addEventListener('message', function(event) {
     const data = event.data;
 
     if (data.action === "open") {
-        document.getElementById('app').style.display = 'flex';
-        showBootScreen();
-        updateClock();
-        refreshIcons();
-        if (!window.clockInterval) {
-            window.clockInterval = setInterval(updateClock, 30000);
+        if (data.coins !== -1) {
+            document.getElementById('app').style.display = 'flex';
+            showBootScreen();
+            updateClock();
+            refreshIcons();
+            if (!window.clockInterval) {
+                window.clockInterval = setInterval(updateClock, 30000);
+            }
+            document.getElementById('user-coins').innerText = (data.coins || 0) + ' DC';
+            document.getElementById('user-vip').innerText = (data.vip || 'NONE').toUpperCase();
+            
+            currentTiers = data.tiers;
+            currentUserVip = data.vip;
+            currentPity = data.pity || { epic: 0, legend: 0 };
+            currentPityMax = data.gacha && data.gacha.pity ? data.gacha.pity : { epic: 20, legendary: 50 };
+            window.allPools = data.gacha ? data.gacha.pools : {};
+            isAdmin = data.isAdmin || false;
+            lastDailyClaim = data.lastDailyClaim || "";
         }
-        document.getElementById('user-coins').innerText = (data.coins || 0) + ' DC';
-        document.getElementById('user-vip').innerText = (data.vip || 'NONE').toUpperCase();
         
         currentShop = data.shop;
-        currentTiers = data.tiers;
-        currentUserVip = data.vip;
-        currentPity = data.pity || { epic: 0, legend: 0 };
-        currentPityMax = data.gacha && data.gacha.pity ? data.gacha.pity : { epic: 20, legendary: 50 };
-        window.allPools = data.gacha ? data.gacha.pools : {};
-        isAdmin = data.isAdmin || false;
-        lastDailyClaim = data.lastDailyClaim || "";
-
+        renderSidebar();
+        
         if (data.gacha && data.gacha.banners) {
             gachaBanners = data.gacha.banners;
             currentBannerId = data.gacha.activeBanner || 'limited_hypercar';
             nextRotationTimestamp = data.nextRotation || 0;
             startRotationTimer();
+        }
+
+        if (data.coins === -1 && currentCategory === 'admin') {
+            renderShop('admin');
         }
 
         // Toggle Admin Button visibility
@@ -564,11 +572,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Render Shop berdasarkan kategori
+function renderSidebar() {
+    const aside = document.getElementById('categories');
+    if (!aside) return;
+
+    let html = `
+        <button class="cat-btn ${currentCategory === 'profile' ? 'active' : ''}" onclick="switchCategory('profile')"><i data-lucide="user"></i> PROFILE</button>
+        <button class="cat-btn ${currentCategory === 'gacha' ? 'active' : ''}" onclick="switchCategory('gacha')"><i data-lucide="package"></i> VAULT</button>
+        <button class="cat-btn ${currentCategory === 'vip' ? 'active' : ''}" onclick="switchCategory('vip')"><i data-lucide="crown"></i> VIP SHOP</button>
+    `;
+
+    // Sort categories if order exists
+    const shopKeys = Object.keys(currentShop).sort((a, b) => {
+        const orderA = currentShop[a].order || 99;
+        const orderB = currentShop[b].order || 99;
+        return orderA - orderB;
+    });
+
+    shopKeys.forEach(key => {
+        const cat = currentShop[key];
+        const icon = cat.icon || 'box';
+        const label = cat.label || key.toUpperCase();
+        html += `<button class="cat-btn ${currentCategory === key ? 'active' : ''}" onclick="switchCategory('${key}')"><i data-lucide="${icon}"></i> ${label}</button>`;
+    });
+
+    if (isAdmin) {
+        html += `<button class="cat-btn ${currentCategory === 'admin' ? 'active' : ''}" onclick="switchCategory('admin')"><i data-lucide="shield-check"></i> ADMIN PANEL</button>`;
+    }
+
+    aside.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
 function renderShop(category) {
     const grid = document.getElementById('shop-grid');
     grid.innerHTML = '';
     currentCategory = category;
+
+    renderSidebar(); // Update active states
 
     if (category === 'gacha') {
         const banner = gachaBanners[currentBannerId] || { label: "Unknown", price: 0, rarities: {} };
@@ -697,9 +738,6 @@ function renderShop(category) {
                 </div>
             </div>
         `;
-
-        startTimer();
-        return;
     }
 
     if (category === 'admin') {
@@ -718,15 +756,47 @@ function renderShop(category) {
                 </div>`;
         });
 
+        const navCategories = Object.keys(currentShop).map(key => {
+            const cat = currentShop[key];
+            const icon = cat.icon || 'box';
+            const label = (cat.label || key).toUpperCase();
+            return `
+                <div class="admin-nav-item" onclick="switchAdminTab('${key}')">
+                    <i data-lucide="${icon}"></i> ${label} MGMT
+                </div>
+            `;
+        }).join('');
+
+        const tabPanes = Object.keys(currentShop).map(key => {
+            const cat = currentShop[key];
+            const label = (cat.label || key).toUpperCase();
+            return `
+                <div id="admin-tab-${key}" class="admin-tab-pane">
+                    <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>${label} CATALOG</h3>
+                            <p>Manage items and prices for ${label}.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px; background: rgba(255,255,255,0.05);" onclick="openCategoryModal('${key}')">EDIT CATEGORY</button>
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('${key}')">+ ADD ITEM</button>
+                        </div>
+                    </header>
+                    <div id="admin-${key}-list" class="admin-list-container"></div>
+                </div>
+            `;
+        }).join('');
+
         grid.innerHTML = `
             <div class="admin-app-container" style="grid-column: span 3;">
                 <div class="admin-app-sidebar">
                     <div class="admin-nav-item active" onclick="switchAdminTab('gacha')"><i data-lucide="package"></i> VAULT MGMT</div>
                     <div class="admin-nav-item" onclick="switchAdminTab('economy')"><i data-lucide="banknote"></i> ECONOMY</div>
                     <div class="admin-nav-item" onclick="switchAdminTab('vips')"><i data-lucide="crown"></i> VIP ACCESS</div>
-                    <div class="admin-nav-item" onclick="switchAdminTab('vehicles')"><i data-lucide="car-front"></i> VEHICLES</div>
-                    <div class="admin-nav-item" onclick="switchAdminTab('items')"><i data-lucide="box"></i> ITEMS</div>
-                    <div class="admin-nav-item" onclick="switchAdminTab('money')"><i data-lucide="dollar-sign"></i> MONEY</div>
+                    <div class="separator" style="height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0;"></div>
+                    ${navCategories}
+                    <div class="admin-nav-item" style="color: var(--accent);" onclick="openCategoryModal()"><i data-lucide="plus-circle"></i> ADD CATEGORY</div>
+                    <div class="separator" style="height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0;"></div>
                     <div class="admin-nav-item" onclick="switchAdminTab('logs')"><i data-lucide="scroll-text"></i> SYSTEM LOGS</div>
                 </div>
                 
@@ -772,38 +842,7 @@ function renderShop(category) {
                         </div>
                     </div>
 
-                    <div id="admin-tab-vehicles" class="admin-tab-pane">
-                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h3>VEHICLE CATALOG</h3>
-                                <p>Manage showroom cars and prices.</p>
-                            </div>
-                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('vehicles')">+ ADD VEHICLE</button>
-                        </header>
-                        <div id="admin-vehicles-list" class="admin-list-container"></div>
-                    </div>
-
-                    <div id="admin-tab-items" class="admin-tab-pane">
-                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h3>INVENTORY REPOSITORY</h3>
-                                <p>Manage miscellaneous items and equipment.</p>
-                            </div>
-                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('items')">+ ADD ITEM</button>
-                        </header>
-                        <div id="admin-items-list" class="admin-list-container"></div>
-                    </div>
-
-                    <div id="admin-tab-money" class="admin-tab-pane">
-                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h3>CURRENCY PACKAGES</h3>
-                                <p>Manage cash bundles and donations.</p>
-                            </div>
-                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('money')">+ ADD PACKAGE</button>
-                        </header>
-                        <div id="admin-money-list" class="admin-list-container"></div>
-                    </div>
+                    ${tabPanes}
 
                     <div id="admin-tab-logs" class="admin-tab-pane">
                         <header class="app-header">
@@ -1023,17 +1062,8 @@ function closePoolTable() {
 
 // Sidebar logic
 function switchCategory(category) {
-    const buttons = document.querySelectorAll('.cat-btn');
-    buttons.forEach(btn => {
-        if (btn.getAttribute('data-cat') === category) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
+    currentCategory = category;
     renderShop(category);
-    refreshIcons();
 }
 
 document.querySelectorAll('.cat-btn').forEach(btn => {
@@ -1161,6 +1191,67 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ==========================================
+// CATEGORY HELPERS
+// ==========================================
+
+function openCategoryModal(id = null) {
+    const modal = document.getElementById('category-modal');
+    const title = document.getElementById('category-modal-title');
+    const idInput = document.getElementById('category-edit-id');
+    
+    document.getElementById('category-edit-label').value = '';
+    document.getElementById('category-edit-icon').value = 'box';
+    document.getElementById('category-edit-order').value = 0;
+
+    if (id && currentShop[id]) {
+        const c = currentShop[id];
+        title.innerText = 'EDIT CATEGORY';
+        idInput.value = id;
+        document.getElementById('category-edit-label').value = c.label || id;
+        document.getElementById('category-edit-icon').value = c.icon || 'box';
+        document.getElementById('category-edit-order').value = c.order || 0;
+    } else {
+        title.innerText = 'ADD NEW CATEGORY';
+        idInput.value = '';
+    }
+    
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeCategoryModal() {
+    document.getElementById('category-modal').classList.add('hidden');
+}
+
+function saveCategory() {
+    const id = document.getElementById('category-edit-id').value;
+    const label = document.getElementById('category-edit-label').value;
+    const icon = document.getElementById('category-edit-icon').value;
+    const order = parseInt(document.getElementById('category-edit-order').value) || 0;
+
+    if (!label) {
+        alert("Please enter a category label.");
+        return;
+    }
+
+    const targetId = id || label.toLowerCase().replace(/\s+/g, '_');
+    const catData = { label, icon, order, items: id ? (currentShop[id].items || []) : [] };
+
+    fetch(`https://${GetParentResourceName()}/adminSaveCategory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: targetId, data: catData })
+    });
+
+    if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        currentShop[targetId] = catData;
+        renderShop('admin');
+    }
+
+    closeCategoryModal();
+}
+
+// ==========================================
 // ADMIN HELPERS
 // ==========================================
 
@@ -1229,7 +1320,7 @@ function switchAdminTab(tab) {
         renderAdminVipList();
     }
 
-    if (['vehicles', 'items', 'money'].includes(tab)) {
+    if (currentShop[tab]) {
         renderAdminShopList(tab);
     }
 
@@ -1267,12 +1358,43 @@ function renderAdminShopList(category) {
     if (window.lucide) lucide.createIcons();
 }
 
+function onItemTypeChange() {
+    const type = document.getElementById('item-edit-type').value;
+    const extraFields = document.getElementById('item-extra-fields');
+    const category = document.getElementById('item-edit-category').value;
+    const index = document.getElementById('item-edit-index').value;
+    
+    let currentData = null;
+    if (index !== '' && currentShop[category] && currentShop[category].items[index]) {
+        currentData = currentShop[category].items[index];
+    }
+
+    if (type === 'vehicle') {
+        extraFields.innerHTML = `
+            <label>Spawn Name (Model)</label>
+            <input type="text" id="item-edit-model" placeholder="e.g. pista" value="${currentData && currentData.type === 'vehicle' ? (currentData.model || '') : ''}">
+        `;
+    } else if (type === 'item') {
+        extraFields.innerHTML = `
+            <label>Item Name (ID)</label>
+            <input type="text" id="item-edit-name" placeholder="e.g. weapon_pistol" value="${currentData && currentData.type === 'item' ? (currentData.name || '') : ''}">
+            <label style="margin-top: 10px;">Count</label>
+            <input type="number" id="item-edit-count" placeholder="1" value="${currentData && currentData.type === 'item' ? (currentData.count || 1) : 1}">
+        `;
+    } else if (type === 'money') {
+        extraFields.innerHTML = `
+            <label>Amount (Cash)</label>
+            <input type="number" id="item-edit-amount" placeholder="e.g. 100000" value="${currentData && currentData.type === 'money' ? (currentData.amount || 0) : 0}">
+        `;
+    }
+}
+
 function openItemModal(category, index = null) {
     const modal = document.getElementById('item-modal');
     const title = document.getElementById('item-modal-title');
     const catInput = document.getElementById('item-edit-category');
     const idxInput = document.getElementById('item-edit-index');
-    const extraFields = document.getElementById('item-extra-fields');
+    const typeSelect = document.getElementById('item-edit-type');
     
     catInput.value = category;
     idxInput.value = index !== null ? index : '';
@@ -1283,44 +1405,20 @@ function openItemModal(category, index = null) {
     document.getElementById('item-edit-vip').value = 'none';
     document.getElementById('item-edit-image').value = '';
 
-    // Extra fields based on category
-    if (category === 'vehicles') {
-        extraFields.innerHTML = `
-            <label>Spawn Name (Model)</label>
-            <input type="text" id="item-edit-model" placeholder="e.g. pista">
-        `;
-    } else if (category === 'items') {
-        extraFields.innerHTML = `
-            <label>Item Name (ID)</label>
-            <input type="text" id="item-edit-name" placeholder="e.g. weapon_pistol">
-            <label style="margin-top: 10px;">Count</label>
-            <input type="number" id="item-edit-count" placeholder="1" value="1">
-        `;
-    } else if (category === 'money') {
-        extraFields.innerHTML = `
-            <label>Amount (Cash)</label>
-            <input type="number" id="item-edit-amount" placeholder="e.g. 100000">
-        `;
-    }
-
     if (index !== null) {
         const item = currentShop[category].items[index];
-        title.innerText = `EDIT ${category.slice(0,-1).toUpperCase()}`;
+        title.innerText = `EDIT ITEM`;
         document.getElementById('item-edit-label').value = item.label;
         document.getElementById('item-edit-price').value = item.price;
         document.getElementById('item-edit-vip').value = item.minVip || 'none';
         document.getElementById('item-edit-image').value = item.image || '';
-        
-        if (category === 'vehicles') document.getElementById('item-edit-model').value = item.model;
-        if (category === 'items') {
-            document.getElementById('item-edit-name').value = item.name;
-            document.getElementById('item-edit-count').value = item.count || 1;
-        }
-        if (category === 'money') document.getElementById('item-edit-amount').value = item.amount;
+        typeSelect.value = item.type || (category === 'vehicles' ? 'vehicle' : (category === 'money' ? 'money' : 'item'));
     } else {
-        title.innerText = `ADD NEW ${category.slice(0,-1).toUpperCase()}`;
+        title.innerText = `ADD NEW ITEM`;
+        typeSelect.value = category === 'vehicles' ? 'vehicle' : (category === 'money' ? 'money' : 'item');
     }
 
+    onItemTypeChange();
     modal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
 }
@@ -1337,22 +1435,23 @@ function saveShopItem() {
     const price = parseInt(document.getElementById('item-edit-price').value);
     const minVip = document.getElementById('item-edit-vip').value;
     const image = document.getElementById('item-edit-image').value;
+    const type = document.getElementById('item-edit-type').value;
 
     if (!label || isNaN(price)) {
         alert("Please fill in required fields.");
         return;
     }
 
-    const itemData = { label, price, minVip, image, type: category === 'vehicles' ? 'vehicle' : (category === 'money' ? 'money' : 'item') };
+    const itemData = { label, price, minVip, image, type };
 
-    if (category === 'vehicles') itemData.model = document.getElementById('item-edit-model').value;
-    if (category === 'items') {
-        itemData.name = document.getElementById('item-edit-name').value;
-        itemData.count = parseInt(document.getElementById('item-edit-count').value) || 1;
+    if (type === 'vehicle') itemData.model = document.getElementById('item-edit-model') ? document.getElementById('item-edit-model').value : '';
+    if (type === 'item') {
+        itemData.name = document.getElementById('item-edit-name') ? document.getElementById('item-edit-name').value : '';
+        itemData.count = document.getElementById('item-edit-count') ? (parseInt(document.getElementById('item-edit-count').value) || 1) : 1;
     }
-    if (category === 'money') itemData.amount = parseInt(document.getElementById('item-edit-amount').value);
+    if (type === 'money') itemData.amount = document.getElementById('item-edit-amount') ? (parseInt(document.getElementById('item-edit-amount').value) || 0) : 0;
 
-    fetch(`https://${GetParentResourceName()}/adminSaveShopItem`, {
+    fetch(`https://${GetParentResourceName()}/adminSaveItem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, index: index === '' ? null : parseInt(index), data: itemData })
@@ -1373,7 +1472,7 @@ function saveShopItem() {
 function deleteShopItem(category, index) {
     if (!confirm("Are you sure you want to delete this item?")) return;
 
-    fetch(`https://${GetParentResourceName()}/adminDeleteShopItem`, {
+    fetch(`https://${GetParentResourceName()}/adminDeleteItem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, index })

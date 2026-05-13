@@ -116,6 +116,36 @@ QBCore.Commands.Add("syncdiscord", "Sinkronisasi Role VIP Discord", {}, false, f
 end)
 
 -- ==========================================
+-- SHOP PERSISTENCE
+-- ==========================================
+
+local shopFile = "shop_data.json"
+
+local function LoadShopData()
+    local content = LoadResourceFile(GetCurrentResourceName(), shopFile)
+    if content then
+        local data = json.decode(content)
+        if data then
+            Config.Shop = data
+            print("^2[SHOP]^7 Data loaded from " .. shopFile)
+        end
+    else
+        SaveResourceFile(GetCurrentResourceName(), shopFile, json.encode(Config.Shop, {indent = true}), -1)
+        print("^3[SHOP]^7 Data file created with default values.")
+    end
+end
+
+local function SaveShopData()
+    SaveResourceFile(GetCurrentResourceName(), shopFile, json.encode(Config.Shop, {indent = true}), -1)
+    TriggerClientEvent('dc_vip:syncShop', -1, Config.Shop)
+end
+
+CreateThread(function()
+    Wait(500)
+    LoadShopData()
+end)
+
+-- ==========================================
 -- DATABASE GETTER & SETTER
 -- ==========================================
 
@@ -303,6 +333,66 @@ RegisterNetEvent('dc_vip:adminGiveDC', function(targetId, amount)
         MySQL.update('UPDATE players SET dc_coin = ? WHERE citizenid = ?', {newVal, TPlayer.PlayerData.citizenid})
         TriggerClientEvent('QBCore:Notify', src, "Gave " .. amount .. " DC to " .. TPlayer.PlayerData.charinfo.firstname, "success")
         TriggerClientEvent('QBCore:Notify', TPlayer.PlayerData.source, "You received " .. amount .. " Darkness Coins from Admin", "primary")
+    end
+end)
+
+-- Admin Save Category
+RegisterNetEvent('dc_vip:adminSaveCategory', function(payload)
+    local src = source
+    if not IsAdmin(src) then return end
+    
+    local id = payload.id
+    local data = payload.data
+    
+    if not Config.Shop[id] then
+        Config.Shop[id] = {
+            label = data.label or id,
+            icon = data.icon or "box",
+            order = data.order or 10,
+            items = {}
+        }
+    else
+        Config.Shop[id].label = data.label
+        Config.Shop[id].icon = data.icon
+        Config.Shop[id].order = data.order
+    end
+    
+    SaveShopData()
+    TriggerClientEvent('QBCore:Notify', src, "Category " .. Config.Shop[id].label .. " saved!", "success")
+end)
+
+-- Admin Save Item
+RegisterNetEvent('dc_vip:adminSaveItem', function(payload)
+    local src = source
+    if not IsAdmin(src) then return end
+    
+    local category = payload.category
+    local item = payload.item
+    local index = payload.index -- Nil if adding new
+    
+    if Config.Shop[category] then
+        if index and Config.Shop[category].items[index + 1] then
+            Config.Shop[category].items[index + 1] = item
+        else
+            table.insert(Config.Shop[category].items, item)
+        end
+        SaveShopData()
+        TriggerClientEvent('QBCore:Notify', src, "Item saved successfully!", "success")
+    end
+end)
+
+-- Admin Delete Item
+RegisterNetEvent('dc_vip:adminDeleteItem', function(payload)
+    local src = source
+    if not IsAdmin(src) then return end
+    
+    local category = payload.category
+    local index = payload.index
+    
+    if Config.Shop[category] and Config.Shop[category].items[index + 1] then
+        table.remove(Config.Shop[category].items, index + 1)
+        SaveShopData()
+        TriggerClientEvent('QBCore:Notify', src, "Item deleted!", "success")
     end
 end)
 

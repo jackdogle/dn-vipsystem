@@ -132,6 +132,21 @@ RegisterNUICallback('adminGiveDC', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('adminSaveCategory', function(data, cb)
+    TriggerServerEvent('dc_vip:adminSaveCategory', data)
+    cb('ok')
+end)
+
+RegisterNUICallback('adminSaveItem', function(data, cb)
+    TriggerServerEvent('dc_vip:adminSaveItem', data)
+    cb('ok')
+end)
+
+RegisterNUICallback('adminDeleteItem', function(data, cb)
+    TriggerServerEvent('dc_vip:adminDeleteItem', data)
+    cb('ok')
+end)
+
 RegisterNetEvent('dc_vip:updateBanner', function(bannerId, nextRotation)
     Config.Gacha.activeBanner = bannerId
     SendNUIMessage({
@@ -139,6 +154,17 @@ RegisterNetEvent('dc_vip:updateBanner', function(bannerId, nextRotation)
         bannerId = bannerId,
         nextRotation = nextRotation
     })
+end)
+
+RegisterNetEvent('dc_vip:syncShop', function(newShop)
+    Config.Shop = newShop
+    if isMenuOpen then
+        SendNUIMessage({
+            action = "open", -- Refresh with new data
+            coins = -1, -- Indication to only update shop data if needed, or just full refresh
+            shop = Config.Shop
+        })
+    end
 end)
 
 -- Event dari server untuk hasil gacha
