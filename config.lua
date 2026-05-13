@@ -10,6 +10,16 @@ Config.Webhook = "MASUKKAN_WEBHOOK_ANDA_DISINI"
 
 -- Tier VIP & Benefits (Struktur Data)
 Config.VIPTiers = {
+    ['bronze_7d'] = {
+        label = "7-Day Bronze VIP",
+        price = 150,
+        duration = 7,
+        salary_multiplier = 1.1,
+        garage_slots = 2,
+        discount = 0.02,
+        color = {205, 127, 50},
+        tag = "[BRONZE-7D]"
+    },
     ['bronze'] = {
         label = "Bronze VIP",
         price = 500, -- DC
@@ -82,10 +92,12 @@ Config.Gacha = {
                 ['legendary'] = {
                     { type = 'money', amount = 1000000, label = '$1.000.000 Cash', weight = 1 },
                     { type = 'vehicle', model = 'pista', label = 'Ferrari Pista', weight = 0.5 },
+                    { type = 'vehicle', model = 'r8', label = 'Audi R8 V10', weight = 0.5 },
                 },
                 ['epic'] = {
                     { type = 'money', amount = 250000, label = '$250.000 Cash', weight = 2 },
-                    { type = 'item', name = 'weapon_pistol', label = 'Epic Pistol', weight = 3 },
+                    { type = 'item', name = 'weapon_pistol_heavy', label = 'Heavy Pistol', weight = 3 },
+                    { type = 'item', name = 'phone_ultra', label = 'iPhone 15 Ultra', weight = 2 },
                 }
             }
         },
@@ -94,7 +106,7 @@ Config.Gacha = {
             description = "Kesempatan terbatas mendapatkan mobil tercepat!",
             price = 500,
             endsAt = "2026-06-01 00:00:00",
-            featured = {"Ferrari Pista", "Lamborghini Aventador", "Bugatti Chiron"},
+            featured = {"Ferrari Pista", "Lamborghini Aventador", "Bugatti Chiron", "McLaren P1"},
             image = "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?q=80&w=400",
             rarities = {
                 ['legendary'] = { chance = 5, label = "LEGENDARY" }, 
@@ -107,9 +119,11 @@ Config.Gacha = {
                     { type = 'vehicle', model = 'pista', label = 'Ferrari Pista', weight = 1 },
                     { type = 'vehicle', model = 'aventador', label = 'Lamborghini Aventador', weight = 1 },
                     { type = 'vehicle', model = 'chiron', label = 'Bugatti Chiron', weight = 0.5 },
+                    { type = 'vehicle', model = 'p1', label = 'McLaren P1', weight = 0.5 },
                 },
                 ['epic'] = {
                     { type = 'vehicle', model = 'gtr', label = 'Nissan GTR R35', weight = 2 },
+                    { type = 'vehicle', model = 'r8', label = 'Audi R8 V10', weight = 2 },
                     { type = 'money', amount = 1000000, label = '$1.000.000 Cash', weight = 1 },
                 }
             }
@@ -128,9 +142,11 @@ Config.Gacha = {
             pools = {
                 ['legendary'] = {
                     { type = 'item', name = 'diamond_watch', label = 'Diamond Watch', weight = 1 },
+                    { type = 'item', name = 'luxury_card', label = 'Platinum Membership Car', weight = 1 },
                 },
                 ['epic'] = {
                     { type = 'item', name = 'gold_chain', label = 'Gold Chain', weight = 5 },
+                    { type = 'item', name = 'designer_bag', label = 'Designer Bag', weight = 4 },
                 }
             }
         }
@@ -138,20 +154,31 @@ Config.Gacha = {
     pools = {
         ['legendary'] = {
             { type = 'vehicle', model = 'pista', label = 'Ferrari Pista', weight = 1 },
-            { type = 'money', amount = 1000000, label = '$1.000.000 Cash', weight = 2 },
+            { type = 'vehicle', model = 'aventador', label = 'Lamborghini Aventador', weight = 1 },
+            { type = 'vehicle', model = 'chiron', label = 'Bugatti Chiron', weight = 0.5 },
+            { type = 'money', amount = 2500000, label = '$2.500.000 Cash', weight = 2 },
+            { type = 'item', name = 'premium_case', label = 'Mystic Vault Case', weight = 1.5 },
         },
         ['epic'] = {
-            { type = 'vehicle', model = 'gtr', label = 'Nissan GTR', weight = 2 },
-            { type = 'money', amount = 250000, label = '$250.000 Cash', weight = 5 },
-            { type = 'item', name = 'weapon_pistol', label = 'Epic Pistol', weight = 5 },
+            { type = 'vehicle', model = 'gtr', label = 'Nissan GTR Nismo', weight = 2 },
+            { type = 'vehicle', model = 'r8', label = 'Audi R8 V10', weight = 2 },
+            { type = 'money', amount = 500000, label = '$500.000 Cash', weight = 5 },
+            { type = 'item', name = 'weapon_pistol_heavy', label = 'Heavy Pistol', weight = 5 },
+            { type = 'item', name = 'luxury_card', label = 'Diamond Membership', weight = 3 },
+            { type = 'item', name = 'gold_chain', label = 'Solid Gold Chain', weight = 6 },
         },
         ['rare'] = {
-            { type = 'money', amount = 50000, label = '$50.000 Cash', weight = 10 },
-            { type = 'item', name = 'phone', label = 'Rare Phone', weight = 15 },
+            { type = 'money', amount = 100000, label = '$100.000 Cash', weight = 15 },
+            { type = 'item', name = 'phone_ultra', label = 'iPhone 15 Ultra', weight = 20 },
+            { type = 'item', name = 'tablet_pro', label = 'iPad Pro M2', weight = 15 },
+            { type = 'item', name = 'armor_heavy', label = 'Heavy Armor', weight = 25 },
         },
         ['common'] = {
-            { type = 'money', amount = 5000, label = '$5.000 Cash', weight = 40 },
-            { type = 'item', name = 'sandwich', label = 'Sandwich', weight = 60 },
+            { type = 'money', amount = 10000, label = '$10.000 Cash', weight = 50 },
+            { type = 'item', name = 'sandwich', label = 'Premium Sandwich', weight = 80 },
+            { type = 'item', name = 'water', label = 'Mineral Water', weight = 80 },
+            { type = 'item', name = 'coffee', label = 'Hot Coffee', weight = 60 },
+            { type = 'item', name = 'bandage', label = 'First Aid Bandage', weight = 70 },
         }
     }
 }
@@ -197,6 +224,7 @@ Config.Discord = {
 -- Hadiah Harian Berdasarkan VIP
 Config.DailyRewards = {
     ['none']     = { money = 2000, coins = 0 },
+    ['bronze_7d'] = { money = 3000, coins = 0 },
     ['bronze']   = { money = 5000, coins = 0 },
     ['silver']   = { money = 15000, coins = 2 },
     ['gold']     = { money = 25000, coins = 5 },

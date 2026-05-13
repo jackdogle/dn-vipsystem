@@ -1,10 +1,55 @@
 let currentShop = {};
 let currentTiers = {};
 let selectedItem = null;
+let isGachaSpinFlag = false;
 let currentCategory = 'vip';
 let currentUserVip = 'none';
-const vipWeights = { 'none': 0, 'bronze': 1, 'silver': 2, 'gold': 3, 'platinum': 4 };
+const vipWeights = { 'none': 0, 'bronze_7d': 1, 'bronze': 2, 'silver': 3, 'gold': 4, 'platinum': 5 };
 let currentBannerId = 'limited_hypercar';
+
+// Author Branding
+console.log("%c DARKNESS COMMUNITY | VERSION 2.0 %c", "background: #ff0044; color: #fff; padding: 5px; font-weight: bold; border-radius: 3px 0 0 3px;", "background: #222; color: #ff0044; padding: 5px; font-weight: bold; border-radius: 0 3px 3px 0;");
+console.log("%c Script Developed by Jack Dogle %c", "background: #222; color: #fff; padding: 5px;", "");
+
+function refreshIcons() {
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function showBootScreen() {
+    const boot = document.getElementById('boot-screen');
+    const wrapper = document.querySelector('.tablet-wrapper');
+    
+    if (!boot) return;
+
+    boot.classList.remove('hidden');
+    boot.style.opacity = '1';
+    wrapper.style.opacity = '0';
+    wrapper.style.transform = 'scale(0.9) translateY(20px)';
+
+    setTimeout(() => {
+        boot.style.opacity = '0';
+        wrapper.style.opacity = '1';
+        wrapper.style.transform = 'scale(1) translateY(0)';
+        setTimeout(() => boot.classList.add('hidden'), 500);
+    }, 2000);
+}
+
+function exitApp() {
+    // Hide main container immediately for responsiveness
+    const wrapper = document.querySelector('.tablet-wrapper');
+    wrapper.style.opacity = '0';
+    wrapper.style.transform = 'scale(0.9) translateY(20px)';
+    
+    setTimeout(() => {
+        // Close session
+        fetch(`https://${GetParentResourceName()}/closeMenu`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }, 300);
+}
 
 // Theme Logic
 function initTheme() {
@@ -46,6 +91,9 @@ let nextRotationTimestamp = 0;
 let rotationTimerInterval = null;
 let isAdmin = false;
 let lastDailyClaim = "";
+let currentAdminLogs = [];
+let logPollInterval = null;
+let currentLogFilter = 'all';
 
 function checkVipRequirement(requirement) {
     if (!requirement || requirement === 'none') return true;
@@ -59,8 +107,9 @@ window.addEventListener('message', function(event) {
 
     if (data.action === "open") {
         document.getElementById('app').style.display = 'flex';
+        showBootScreen();
         updateClock();
-        if (window.lucide) lucide.createIcons();
+        refreshIcons();
         if (!window.clockInterval) {
             window.clockInterval = setInterval(updateClock, 30000);
         }
@@ -149,6 +198,11 @@ window.addEventListener('message', function(event) {
         if (activeBtn && activeBtn.dataset.category === 'gacha') {
             renderShop('gacha');
         }
+    }
+
+    if (data.action === "adminLogs") {
+        currentAdminLogs = data.logs || [];
+        updateLogTerminal();
     }
 
     if (data.action === "gachaResult") {
@@ -249,6 +303,34 @@ function createRouletteItems(bannerId) {
 }
 
 function spinGacha() {
+    const btn = document.getElementById('spin-btn');
+    if (btn.disabled) return;
+    
+    openGachaModal();
+}
+
+function openGachaModal() {
+    isGachaSpinFlag = true;
+    const banner = gachaBanners[currentBannerId];
+    if (!banner) return;
+    
+    document.getElementById('modal-text').innerHTML = `
+        <div style="text-align: center;">
+            <i data-lucide="help-circle" style="width: 48px; height: 48px; color: var(--gold); margin-bottom: 15px;"></i>
+            <h3 style="font-family: 'Orbitron'; color: white; margin-bottom: 10px;">KONFIRMASI SPIN</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">Apakah Anda yakin ingin menggunakan <strong style="color: white;">${banner.label}</strong>?</p>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 5px;">BIAYA SPIN</div>
+                <div style="color: var(--accent); font-family: 'Orbitron'; font-size: 1.5em; font-weight: bold;">${banner.price} DC</div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modal').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function executeSpinGacha() {
     const btn = document.getElementById('spin-btn');
     const giftInput = document.getElementById('gift-target-id');
     const giftTargetId = giftInput ? giftInput.value : null;
@@ -466,6 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
             vip: "bronze",
             userName: "PreviewUser",
             tiers: {
+                bronze_7d: { label: "7-Day Bronze", price: 150, duration: 7, salary_multiplier: 1.1, garage_slots: 2, discount: 0.02, color: [205, 127, 50] },
                 bronze: { label: "Bronze VIP", price: 500, duration: 30, salary_multiplier: 1.2, garage_slots: 5, discount: 0.05, color: [205, 127, 50] },
                 silver: { label: "Silver VIP", price: 1000, duration: 30, salary_multiplier: 1.5, garage_slots: 10, discount: 0.10, color: [192, 192, 192] },
                 gold: { label: "Gold VIP", price: 2500, duration: 30, salary_multiplier: 2.0, garage_slots: 20, discount: 0.15, color: [255, 215, 0] },
@@ -640,6 +723,10 @@ function renderShop(category) {
                 <div class="admin-app-sidebar">
                     <div class="admin-nav-item active" onclick="switchAdminTab('gacha')"><i data-lucide="package"></i> VAULT MGMT</div>
                     <div class="admin-nav-item" onclick="switchAdminTab('economy')"><i data-lucide="banknote"></i> ECONOMY</div>
+                    <div class="admin-nav-item" onclick="switchAdminTab('vips')"><i data-lucide="crown"></i> VIP ACCESS</div>
+                    <div class="admin-nav-item" onclick="switchAdminTab('vehicles')"><i data-lucide="car-front"></i> VEHICLES</div>
+                    <div class="admin-nav-item" onclick="switchAdminTab('items')"><i data-lucide="box"></i> ITEMS</div>
+                    <div class="admin-nav-item" onclick="switchAdminTab('money')"><i data-lucide="dollar-sign"></i> MONEY</div>
                     <div class="admin-nav-item" onclick="switchAdminTab('logs')"><i data-lucide="scroll-text"></i> SYSTEM LOGS</div>
                 </div>
                 
@@ -672,15 +759,67 @@ function renderShop(category) {
                         </div>
                     </div>
 
+                    <div id="admin-tab-vips" class="admin-tab-pane">
+                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3>VIP TIER REGISTRY</h3>
+                                <p>Manage subscription tiers and rewards.</p>
+                            </div>
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openVipModal()">+ ADD NEW TIER</button>
+                        </header>
+                        <div id="admin-vip-list" class="admin-list-container">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div id="admin-tab-vehicles" class="admin-tab-pane">
+                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3>VEHICLE CATALOG</h3>
+                                <p>Manage showroom cars and prices.</p>
+                            </div>
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('vehicles')">+ ADD VEHICLE</button>
+                        </header>
+                        <div id="admin-vehicles-list" class="admin-list-container"></div>
+                    </div>
+
+                    <div id="admin-tab-items" class="admin-tab-pane">
+                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3>INVENTORY REPOSITORY</h3>
+                                <p>Manage miscellaneous items and equipment.</p>
+                            </div>
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('items')">+ ADD ITEM</button>
+                        </header>
+                        <div id="admin-items-list" class="admin-list-container"></div>
+                    </div>
+
+                    <div id="admin-tab-money" class="admin-tab-pane">
+                        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3>CURRENCY PACKAGES</h3>
+                                <p>Manage cash bundles and donations.</p>
+                            </div>
+                            <button class="btn-buy" style="font-size: 10px; padding: 8px 15px;" onclick="openItemModal('money')">+ ADD PACKAGE</button>
+                        </header>
+                        <div id="admin-money-list" class="admin-list-container"></div>
+                    </div>
+
                     <div id="admin-tab-logs" class="admin-tab-pane">
                         <header class="app-header">
                             <h3>INTERNAL LOGS</h3>
                             <p>Real-time system actions and auditor events.</p>
                         </header>
-                        <div class="admin-log-terminal">
-                            <div class="log-line success">[SYSTEM] Connection established - Administrator: ${document.getElementById('user-vip').innerText}</div>
-                            <div class="log-line">[AUDIT] Database synchronized successfully.</div>
-                            <div class="log-line">[NETWORK] Latency: 12ms.</div>
+                        
+                        <div class="log-controls">
+                            <button class="log-filter-btn active" onclick="setLogFilter('all')">ALL</button>
+                            <button class="log-filter-btn" onclick="setLogFilter('success')">SUCCESS</button>
+                            <button class="log-filter-btn" onclick="setLogFilter('error')">ERROR</button>
+                            <button class="log-filter-btn" onclick="setLogFilter('system')">SYSTEM</button>
+                        </div>
+
+                        <div id="admin-log-terminal" class="admin-log-terminal">
+                            <div class="log-line system">[SYSTEM] Loading logs...</div>
                         </div>
                     </div>
                 </div>
@@ -832,6 +971,7 @@ function renderShop(category) {
                 `}
                 <button class="btn-buy" onclick="openModal(${index})">BELI</button>
             `;
+            el.style.animationDelay = `${index * 0.05}s`;
             grid.appendChild(el);
         });
     }
@@ -882,12 +1022,23 @@ function closePoolTable() {
 // Redundant listener removed.
 
 // Sidebar logic
+function switchCategory(category) {
+    const buttons = document.querySelectorAll('.cat-btn');
+    buttons.forEach(btn => {
+        if (btn.getAttribute('data-cat') === category) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderShop(category);
+    refreshIcons();
+}
+
 document.querySelectorAll('.cat-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        renderShop(this.getAttribute('data-cat'));
-        if (window.lucide) lucide.createIcons();
+        switchCategory(this.getAttribute('data-cat'));
     });
 });
 
@@ -945,12 +1096,19 @@ function startRotationTimer() {
 function closeModal() {
     document.getElementById('modal').classList.add('hidden');
     selectedItem = null;
+    isGachaSpinFlag = false;
 }
 
 document.getElementById('cancel-buy').addEventListener('click', closeModal);
 
 // Confirmation Modal Logic
 document.getElementById('confirm-buy').addEventListener('click', function() {
+    if (isGachaSpinFlag) {
+        closeModal();
+        executeSpinGacha();
+        return;
+    }
+
     let itemData;
     if (currentCategory === 'vip') {
         itemData = {
@@ -998,9 +1156,7 @@ window.addEventListener('keydown', (e) => {
             console.log("PREVIEW MODE: Closed");
             return;
         }
-        fetch(`https://${GetParentResourceName()}/closeMenu`, {
-            method: 'POST'
-        });
+        exitApp();
     }
 });
 
@@ -1044,9 +1200,368 @@ function switchAdminTab(tab) {
     document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.admin-tab-pane').forEach(el => el.classList.remove('active'));
     
-    event.currentTarget.classList.add('active');
-    document.getElementById(`admin-tab-${tab}`).classList.add('active');
+    // Fallback if event is not passed correctly or currentTarget is not available
+    let currentTab;
+    if (window.event && window.event.currentTarget) {
+        currentTab = window.event.currentTarget;
+    } else {
+        // Find by tab name if called programmatically or from other contexts
+        currentTab = Array.from(document.querySelectorAll('.admin-nav-item')).find(el => el.textContent.toLowerCase().includes(tab));
+    }
+    
+    if (currentTab) currentTab.classList.add('active');
+    
+    const targetPane = document.getElementById(`admin-tab-${tab}`);
+    if (targetPane) targetPane.classList.add('active');
+
+    // Polling logic
+    if (logPollInterval) {
+        clearInterval(logPollInterval);
+        logPollInterval = null;
+    }
+
+    if (tab === 'logs') {
+        refreshAdminLogs();
+        logPollInterval = setInterval(refreshAdminLogs, 3000);
+    }
+
+    if (tab === 'vips') {
+        renderAdminVipList();
+    }
+
+    if (['vehicles', 'items', 'money'].includes(tab)) {
+        renderAdminShopList(tab);
+    }
+
     if (window.lucide) lucide.createIcons();
+}
+
+function renderAdminShopList(category) {
+    const list = document.getElementById(`admin-${category}-list`);
+    if (!list) return;
+
+    let html = '';
+    const items = currentShop[category].items || [];
+    
+    items.forEach((item, index) => {
+        html += `
+            <div class="admin-list-item">
+                <div class="item-info">
+                    <div class="item-icon-circle" style="background: rgba(255,255,255,0.05); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="${category === 'vehicles' ? 'car' : (category === 'money' ? 'dollar-sign' : 'box')}"></i>
+                    </div>
+                    <div>
+                        <div class="item-name">${item.label} <span class="item-id">(${item.model || item.name || 'PACK'})</span></div>
+                        <div class="item-meta">Price: ${item.price} DC • VIP: ${item.minVip || 'None'}</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <button class="icon-btn" onclick="openItemModal('${category}', ${index})"><i data-lucide="edit-3"></i></button>
+                    <button class="icon-btn delete" onclick="deleteShopItem('${category}', ${index})"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>
+        `;
+    });
+
+    list.innerHTML = html || '<div class="empty-list">No items found in this category.</div>';
+    if (window.lucide) lucide.createIcons();
+}
+
+function openItemModal(category, index = null) {
+    const modal = document.getElementById('item-modal');
+    const title = document.getElementById('item-modal-title');
+    const catInput = document.getElementById('item-edit-category');
+    const idxInput = document.getElementById('item-edit-index');
+    const extraFields = document.getElementById('item-extra-fields');
+    
+    catInput.value = category;
+    idxInput.value = index !== null ? index : '';
+
+    // Reset basics
+    document.getElementById('item-edit-label').value = '';
+    document.getElementById('item-edit-price').value = '';
+    document.getElementById('item-edit-vip').value = 'none';
+    document.getElementById('item-edit-image').value = '';
+
+    // Extra fields based on category
+    if (category === 'vehicles') {
+        extraFields.innerHTML = `
+            <label>Spawn Name (Model)</label>
+            <input type="text" id="item-edit-model" placeholder="e.g. pista">
+        `;
+    } else if (category === 'items') {
+        extraFields.innerHTML = `
+            <label>Item Name (ID)</label>
+            <input type="text" id="item-edit-name" placeholder="e.g. weapon_pistol">
+            <label style="margin-top: 10px;">Count</label>
+            <input type="number" id="item-edit-count" placeholder="1" value="1">
+        `;
+    } else if (category === 'money') {
+        extraFields.innerHTML = `
+            <label>Amount (Cash)</label>
+            <input type="number" id="item-edit-amount" placeholder="e.g. 100000">
+        `;
+    }
+
+    if (index !== null) {
+        const item = currentShop[category].items[index];
+        title.innerText = `EDIT ${category.slice(0,-1).toUpperCase()}`;
+        document.getElementById('item-edit-label').value = item.label;
+        document.getElementById('item-edit-price').value = item.price;
+        document.getElementById('item-edit-vip').value = item.minVip || 'none';
+        document.getElementById('item-edit-image').value = item.image || '';
+        
+        if (category === 'vehicles') document.getElementById('item-edit-model').value = item.model;
+        if (category === 'items') {
+            document.getElementById('item-edit-name').value = item.name;
+            document.getElementById('item-edit-count').value = item.count || 1;
+        }
+        if (category === 'money') document.getElementById('item-edit-amount').value = item.amount;
+    } else {
+        title.innerText = `ADD NEW ${category.slice(0,-1).toUpperCase()}`;
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeItemModal() {
+    document.getElementById('item-modal').classList.add('hidden');
+}
+
+function saveShopItem() {
+    const category = document.getElementById('item-edit-category').value;
+    const index = document.getElementById('item-edit-index').value;
+    
+    const label = document.getElementById('item-edit-label').value;
+    const price = parseInt(document.getElementById('item-edit-price').value);
+    const minVip = document.getElementById('item-edit-vip').value;
+    const image = document.getElementById('item-edit-image').value;
+
+    if (!label || isNaN(price)) {
+        alert("Please fill in required fields.");
+        return;
+    }
+
+    const itemData = { label, price, minVip, image, type: category === 'vehicles' ? 'vehicle' : (category === 'money' ? 'money' : 'item') };
+
+    if (category === 'vehicles') itemData.model = document.getElementById('item-edit-model').value;
+    if (category === 'items') {
+        itemData.name = document.getElementById('item-edit-name').value;
+        itemData.count = parseInt(document.getElementById('item-edit-count').value) || 1;
+    }
+    if (category === 'money') itemData.amount = parseInt(document.getElementById('item-edit-amount').value);
+
+    fetch(`https://${GetParentResourceName()}/adminSaveShopItem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, index: index === '' ? null : parseInt(index), data: itemData })
+    });
+
+    if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        if (index === '') {
+            currentShop[category].items.push(itemData);
+        } else {
+            currentShop[category].items[index] = itemData;
+        }
+        renderAdminShopList(category);
+    }
+
+    closeItemModal();
+}
+
+function deleteShopItem(category, index) {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+
+    fetch(`https://${GetParentResourceName()}/adminDeleteShopItem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, index })
+    });
+
+    if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        currentShop[category].items.splice(index, 1);
+        renderAdminShopList(category);
+    }
+}
+
+function renderAdminVipList() {
+    const list = document.getElementById('admin-vip-list');
+    if (!list) return;
+
+    let html = '';
+    Object.keys(currentTiers).forEach(id => {
+        const tier = currentTiers[id];
+        if (id === 'none') return;
+        
+        html += `
+            <div class="admin-list-item">
+                <div class="item-info">
+                    <div class="tier-color-dot" style="background: rgb(${tier.color.join(',')})"></div>
+                    <div>
+                        <div class="item-name">${tier.label} <span class="item-id">(${id})</span></div>
+                        <div class="item-meta">Price: ${tier.price} DC • Multiplier: x${tier.salary_multiplier} • Discount: ${Math.round(tier.discount * 100)}%</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <button class="icon-btn" onclick="openVipModal('${id}')"><i data-lucide="edit-3"></i></button>
+                    ${id === 'none' ? '' : `<button class="icon-btn delete" onclick="deleteVipTier('${id}')"><i data-lucide="trash-2"></i></button>`}
+                </div>
+            </div>
+        `;
+    });
+
+    list.innerHTML = html || '<div class="empty-list">No VIP tiers found.</div>';
+    if (window.lucide) lucide.createIcons();
+}
+
+function openVipModal(id = null) {
+    const modal = document.getElementById('vip-modal');
+    const title = document.getElementById('vip-modal-title');
+    const idInput = document.getElementById('vip-edit-id');
+    
+    // Clear fields first
+    document.getElementById('vip-edit-label').value = '';
+    document.getElementById('vip-edit-price').value = '';
+    document.getElementById('vip-edit-duration').value = 30;
+    document.getElementById('vip-edit-salary').value = 1.0;
+    document.getElementById('vip-edit-garage').value = 0;
+    document.getElementById('vip-edit-discount').value = 0.05;
+    document.getElementById('vip-edit-color').value = '255,255,255';
+
+    if (id && currentTiers[id]) {
+        const t = currentTiers[id];
+        title.innerText = 'EDIT VIP TIER';
+        idInput.value = id;
+        document.getElementById('vip-edit-label').value = t.label;
+        document.getElementById('vip-edit-price').value = t.price;
+        document.getElementById('vip-edit-duration').value = t.duration || 30;
+        document.getElementById('vip-edit-salary').value = t.salary_multiplier;
+        document.getElementById('vip-edit-garage').value = t.garage_slots || 0;
+        document.getElementById('vip-edit-discount').value = t.discount;
+        document.getElementById('vip-edit-color').value = t.color.join(',');
+    } else {
+        title.innerText = 'ADD NEW VIP TIER';
+        idInput.value = '';
+    }
+    
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeVipModal() {
+    document.getElementById('vip-modal').classList.add('hidden');
+}
+
+function saveVipTier() {
+    const id = document.getElementById('vip-edit-id').value;
+    const label = document.getElementById('vip-edit-label').value;
+    const priceStr = document.getElementById('vip-edit-price').value;
+    const durationStr = document.getElementById('vip-edit-duration').value;
+    const multiplierStr = document.getElementById('vip-edit-salary').value;
+    const garageStr = document.getElementById('vip-edit-garage').value;
+    const discountStr = document.getElementById('vip-edit-discount').value;
+    const colorStr = document.getElementById('vip-edit-color').value;
+
+    const price = parseInt(priceStr);
+    const duration = parseInt(durationStr);
+    const multiplier = parseFloat(multiplierStr);
+    const garage = parseInt(garageStr);
+    const discount = parseFloat(discountStr);
+    const color = colorStr.split(',').map(v => parseInt(v.trim()));
+
+    if (!label || isNaN(price)) {
+        alert("Please fill in required fields correctly.");
+        return;
+    }
+
+    const tierData = {
+        label, price, duration,
+        salary_multiplier: multiplier,
+        garage_slots: garage,
+        discount, color
+    };
+
+    const targetId = id || label.toLowerCase().replace(/\s+/g, '_');
+
+    fetch(`https://${GetParentResourceName()}/adminSaveVipTier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: targetId, data: tierData })
+    });
+
+    if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        currentTiers[targetId] = tierData;
+        renderAdminVipList();
+    }
+
+    closeVipModal();
+}
+
+function deleteVipTier(id) {
+    if (!confirm(`Are you sure you want to delete ${id}?`)) return;
+
+    fetch(`https://${GetParentResourceName()}/adminDeleteVipTier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+
+    if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        delete currentTiers[id];
+        renderAdminVipList();
+    }
+}
+
+function refreshAdminLogs() {
+    const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+    if (isPreview) {
+        // Mock some logs for preview
+        const mockLog = {
+            type: ['success', 'error', 'system'][Math.floor(Math.random() * 3)],
+            message: `[MOCK] Event triggered at ${new Date().toLocaleTimeString()}`,
+            timestamp: new Date().toLocaleTimeString()
+        };
+        currentAdminLogs.unshift(mockLog);
+        if (currentAdminLogs.length > 50) currentAdminLogs.pop();
+        updateLogTerminal();
+        return;
+    }
+
+    fetch(`https://${GetParentResourceName()}/getAdminLogs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+    });
+}
+
+function setLogFilter(filter) {
+    currentLogFilter = filter;
+    document.querySelectorAll('.log-filter-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase() === filter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    updateLogTerminal();
+}
+
+function updateLogTerminal() {
+    const terminal = document.getElementById('admin-log-terminal');
+    if (!terminal) return;
+
+    const filteredLogs = currentAdminLogs.filter(log => {
+        if (currentLogFilter === 'all') return true;
+        return log.type.toLowerCase() === currentLogFilter.toLowerCase();
+    });
+
+    terminal.innerHTML = filteredLogs.map(log => `
+        <div class="log-line ${log.type || ''}">
+            <span class="log-time">[${log.timestamp || ''}]</span>
+            <span class="log-msg">${log.message || ''}</span>
+        </div>
+    `).join('');
 }
 
 function adminChangeBanner(id) {

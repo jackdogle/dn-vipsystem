@@ -183,7 +183,7 @@ local function CheckVipRequirement(src, requirement)
     if not Player then return false end
 
     local userTier = Player.PlayerData.metadata["vip_tier"] or "none"
-    local vipWeights = { ['none'] = 0, ['bronze'] = 1, ['silver'] = 2, ['gold'] = 3, ['platinum'] = 4 }
+    local vipWeights = { ['none'] = 0, ['bronze_7d'] = 1, ['bronze'] = 2, ['silver'] = 3, ['gold'] = 4, ['platinum'] = 5 }
     
     local userWeight = vipWeights[userTier] or 0
     local reqWeight = vipWeights[requirement] or 0

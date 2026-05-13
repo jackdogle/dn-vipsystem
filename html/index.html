@@ -11,6 +11,15 @@
 </head>
 <body>
     <div id="app" style="display: none;">
+        <!-- Boot Screen -->
+        <div id="boot-screen" class="hidden">
+            <div class="boot-logo">
+                <i data-lucide="shield-check"></i>
+                <span>DARKNESS OS</span>
+                <div class="boot-loader"></div>
+            </div>
+        </div>
+
         <div class="tablet-wrapper">
             <div class="tablet-frame">
                 <div class="tablet-screen">
@@ -24,6 +33,7 @@
                         </div>
                         <div class="right">
                             <i data-lucide="moon" id="theme-toggle" class="theme-btn"></i>
+                            <i data-lucide="power" class="theme-btn exit-btn" onclick="exitApp()"></i>
                             <i class="lucide-signal"></i>
                             <i class="lucide-wifi"></i>
                             <i class="lucide-battery"></i>
@@ -69,7 +79,7 @@
 
                         <!-- Footer / Help -->
                         <footer>
-                            <p>Tekan <kbd>ESC</kbd> untuk keluar • Harap cek kembali sebelum membeli.</p>
+                            <p>Developed with ❤️ by <strong>Jack Dogle</strong> • Press <kbd>ESC</kbd> to exit</p>
                         </footer>
 
                         <!-- Tablet Bottom Dock -->
@@ -84,12 +94,102 @@
                         <!-- Software Navigation Bar -->
                         <div class="tablet-nav-bar">
                             <div class="nav-btn"><i data-lucide="chevron-left"></i></div>
-                            <div class="nav-btn home" onclick="fetch(`https://${GetParentResourceName()}/closeMenu`, {method: 'POST'})"><div class="home-indicator"></div></div>
+                            <div class="nav-btn home" onclick="exitApp()"><div class="home-indicator"></div></div>
                             <div class="nav-btn"><i data-lucide="layers"></i></div>
                         </div>
                     </div>
                 </div>
-                <div class="tablet-home-btn" onclick="fetch(`https://${GetParentResourceName()}/closeMenu`, {method: 'POST'})"></div>
+                <div class="tablet-home-btn" onclick="exitApp()"></div>
+            </div>
+        </div>
+
+        <!-- VIP Editor Modal -->
+        <div id="vip-modal" class="hidden">
+            <div class="modal-content vip-editor">
+                <header>
+                    <h3 id="vip-modal-title">EDIT VIP TIER</h3>
+                    <p>Modify tier properties and benefits.</p>
+                </header>
+                <div class="vip-form-grid">
+                    <input type="hidden" id="vip-edit-id">
+                    <div class="form-group">
+                        <label>Tier Name</label>
+                        <input type="text" id="vip-edit-label" placeholder="e.g. Platinum Plus">
+                    </div>
+                    <div class="form-group">
+                        <label>Price (DC)</label>
+                        <input type="number" id="vip-edit-price">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (Days)</label>
+                        <input type="number" id="vip-edit-duration">
+                    </div>
+                    <div class="form-group">
+                        <label>Salary Multiplier</label>
+                        <input type="number" step="0.1" id="vip-edit-salary">
+                    </div>
+                    <div class="form-group">
+                        <label>Garage Slots</label>
+                        <input type="number" id="vip-edit-garage">
+                    </div>
+                    <div class="form-group">
+                        <label>Discount (%)</label>
+                        <input type="number" step="0.01" id="vip-edit-discount" placeholder="0.10 for 10%">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Color (RGB: R,G,B)</label>
+                        <input type="text" id="vip-edit-color" placeholder="255,215,0">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="saveVipTier()">SAVE CHANGES</button>
+                    <button class="btn-ghost" onclick="closeVipModal()">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Item Editor Modal -->
+        <div id="item-modal" class="hidden">
+            <div class="modal-content vip-editor">
+                <header>
+                    <h3 id="item-modal-title">EDIT SHOP ITEM</h3>
+                    <p>Manage product details for this category.</p>
+                </header>
+                <div class="vip-form-grid">
+                    <input type="hidden" id="item-edit-category">
+                    <input type="hidden" id="item-edit-index">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Item Label</label>
+                        <input type="text" id="item-edit-label" placeholder="e.g. Ferrari Pista">
+                    </div>
+                    <div class="form-group">
+                        <label>Price (DC)</label>
+                        <input type="number" id="item-edit-price">
+                    </div>
+                    <div class="form-group">
+                        <label>Min VIP Tier</label>
+                        <select id="item-edit-vip">
+                            <option value="none">None</option>
+                            <option value="bronze_7d">Bronze 7D</option>
+                            <option value="bronze">Bronze</option>
+                            <option value="silver">Silver</option>
+                            <option value="gold">Gold</option>
+                            <option value="platinum">Platinum</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Image URL (Optional)</label>
+                        <input type="text" id="item-edit-image" placeholder="https://...">
+                    </div>
+                    <!-- Category specific fields (like model for vehicles, amount for money) -->
+                    <div id="item-extra-fields" class="form-group" style="grid-column: span 2;">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="saveShopItem()">SAVE CHANGES</button>
+                    <button class="btn-ghost" onclick="closeItemModal()">CANCEL</button>
+                </div>
             </div>
         </div>
 
