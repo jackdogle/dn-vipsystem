@@ -23,7 +23,25 @@ end
 -- DISCORD BOT API INTEGRATION
 -- ==========================================
 
-local botToken = GetConvar("DISCORD_BOT_TOKEN", "REPLACE_ME")
+local botToken = (Config.Discord.token and Config.Discord.token ~= "YOUR_DISCORD_BOT_TOKEN_HERE") and Config.Discord.token or GetConvar("DISCORD_BOT_TOKEN", "REPLACE_ME")
+
+CreateThread(function()
+    if Config.Discord.enabled then
+        if botToken == "REPLACE_ME" or botToken == "" then
+            print("^1[DISCORD ERROR]^7 Discord Bot Token is NOT configured in config.lua or Convar!")
+        else
+            print("^2[DISCORD SUCCESS]^7 Discord Bot Integration Active.")
+            -- Test request to verify token
+            local test = DiscordRequest("GET", "/users/@me")
+            if test and test.code == 200 then
+                local data = json.decode(test.data)
+                print("^2[DISCORD SUCCESS]^7 Connected as Bot: ^5" .. data.username .. "#" .. data.discriminator .. "^7")
+            else
+                print("^1[DISCORD ERROR]^7 Failed to connect to Discord API. Check your token!")
+            end
+        end
+    end
+end)
 
 local function DiscordRequest(method, endpoint, jsondata)
     local data = nil

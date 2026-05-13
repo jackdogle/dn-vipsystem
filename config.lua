@@ -211,8 +211,8 @@ Config.Shop = {
 -- Discord Bot Integration
 Config.Discord = {
     enabled = true,
+    token = "YOUR_DISCORD_BOT_TOKEN_HERE", -- Masukkan Token Bot Discord Anda
     guildId = "YOUR_GUILD_ID", -- ID Discord Server Anda
-    -- Token tidak ditaruh di sini demi keamanan (gunakan environment variable)
     roles = {
         ['bronze'] = "ROLE_ID_BRONZE",
         ['silver'] = "ROLE_ID_SILVER",
